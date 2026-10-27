@@ -45,7 +45,7 @@ a.map{color:var(--gold);font-weight:800;text-decoration:none;display:inline-flex
 @media(orientation:landscape){#sig{display:grid;grid-template-columns:minmax(0,1fr) 116px;grid-template-rows:auto 1fr;gap:0 10px;padding-top:10px}#sig .pad{grid-column:1;grid-row:1/3}#sig header{grid-column:2;padding:4px 0}#sig header b{font-size:14px;line-height:1.2}#sig header span,#sig header small{display:none}#sig .col{grid-column:2;grid-row:2;display:flex;flex-direction:column;justify-content:flex-end}#sig .acts{grid-template-columns:1fr}#sig .btn{min-height:46px;font-size:13px;margin-top:8px;padding:0 6px}}
 .toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--gold);padding:12px 18px;border-radius:14px;z-index:99;box-shadow:var(--sh);font-weight:700;max-width:90%}
 .sync{font-size:12px;color:var(--muted);text-align:center;margin-top:16px}
-</style></head><body><div id="app"></div>
+.tt,.tt *,.tt *::before,.tt *::after{transition:background-color .8s linear,color .8s linear,border-color .8s linear,fill .8s linear,stroke .8s linear!important}</style></head><body><div id="app"></div>
 <script>!function(t,e){"object"==typeof exports&&"undefined"!=typeof module?e(exports):"function"==typeof define&&define.amd?define(["exports"],e):e((t=t||self).PDFLib={})}(this,(function(t){"use strict";
 /*! *****************************************************************************
     Copyright (c) Microsoft Corporation. All rights reserved.
@@ -155,29 +155,31 @@ function fit(){if(!cv)return;const r={width:cv.offsetWidth,height:cv.offsetHeigh
 addEventListener("resize",()=>setTimeout(fit,150));
 function pt(e){e.preventDefault();const r=cv.getBoundingClientRect(),rt=$("#sig").classList.contains("rot")&&innerHeight>innerWidth,p=rt?[e.clientY-r.top,r.right-e.clientX]:[e.clientX-r.left,e.clientY-r.top];if(e.type==="pointerdown"){drawing=true;last=p;cv.setPointerCapture(e.pointerId);ctx.beginPath();ctx.arc(p[0],p[1],1.5,0,7);ctx.fill();dirty=true}else if(e.type==="pointermove"&&drawing){const w=e.pressure&&e.pointerType==="pen"?1+e.pressure*4:3;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(last[0],last[1]);ctx.lineTo(p[0],p[1]);ctx.stroke();last=p}else drawing=false}
 /* ===== PDF (pdf-lib, offline) ===== */
-/* ===== PDF do canhoto (pdf-lib) — mesmo layout no sistema e no app do motorista ===== */
+/* ===== PDF padrão MANUTEC (pdf-lib) — mesmo layout em canhoto, OS, fatura, contrato e cotação ===== */
 const brM=v=>(+v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}).replace(/ /g," "),fqn=n=>String(+n).replace(".",",");
 const itensLoc=(desc,dia,qd,kv,km,total)=>{const I=[];if(+qd>0)I.push([`Diária — ${desc}`,fqn(qd)+(+qd===1?" diária":" diárias"),brM(dia),brM(dia*qd)]);if(+km>0)I.push(["KM rodado",fqn(km)+" km",brM(kv),brM(km*kv)]);if(!I.length)I.push([`Locação — ${desc}`,"1",brM(total),brM(total)]);return I};
 const dataUrlBytes=u=>Uint8Array.from(atob(u.split(",")[1]),c=>c.charCodeAt(0));
-async function canhotoPDF(list){const{PDFDocument,StandardFonts,rgb}=PDFLib,doc=await PDFDocument.create(),f=await doc.embedFont(StandardFonts.Helvetica),b=await doc.embedFont(StandardFonts.HelveticaBold),G=rgb(.71,.48,.07),K=rgb(.1,.1,.09),M=rgb(.4,.4,.38),LN=rgb(.8,.78,.72);
-for(const d of list){const pg=doc.addPage([595,842]);let y=718;
+/* d = {titulo, blocks:[{t,rows:[[k,v]]}] (ou campos do canhoto), itens:[[desc,qtd,unit,sub]], total, pgto, sigs:[{img,label}], rodape} */
+async function canhotoPDF(list){const{PDFDocument,StandardFonts,rgb}=PDFLib,doc=await PDFDocument.create(),f=await doc.embedFont(StandardFonts.Helvetica),b=await doc.embedFont(StandardFonts.HelveticaBold),G=rgb(.71,.48,.07),K=rgb(.1,.1,.09),M=rgb(.4,.4,.38),LN=rgb(.8,.78,.72),GD=rgb(.9,.68,.24),BK=rgb(.05,.05,.04);
+for(const d of list){let pg=doc.addPage([595,842]),y=718;
  const T=(t,x,yy,s=10,fn=f,c=K)=>pg.drawText(String(t??""),{x,y:yy,size:s,font:fn,color:c}),W=(t,s=10,fn=f)=>fn.widthOfTextAtSize(String(t),s),R=(t,xr,yy,s=10,fn=f)=>T(t,xr-W(t,s,fn),yy,s,fn);
  const wrap=(t,w,s=10.5)=>{const o=[];String(t||"").split("\n").forEach(p=>{let l="";p.split(" ").forEach(x=>{if(W(l+" "+x,s)>w&&l){o.push(l);l=x}else l=l?l+" "+x:x});o.push(l)});return o};
- pg.drawRectangle({x:0,y:772,width:595,height:70,color:rgb(.05,.05,.04)});T("MANUTEC",40,805,26,b,rgb(.9,.68,.24));T("LOCAÇÃO & SERVIÇOS",40,788,8,b,rgb(.9,.68,.24));
- T(d.titulo,40,745,14,b,G);
- const sec=t=>{y-=8;pg.drawLine({start:{x:40,y:y+4},end:{x:555,y:y+4},thickness:.6,color:LN});y-=14;T(t.toUpperCase(),40,y,9,b,G);y-=16},kv=(k,v)=>{if(v===""||v==null)return;const L=wrap(v,390);T(k,40,y,9.5,b,M);L.forEach((l,i)=>{T(l,150,y,10.5);if(i<L.length-1)y-=14});y-=17};
- sec("Ordem de serviço");kv("Nº da ordem",d.ordem);kv("Locação",d.locacao);kv("Data agendada",d.agendado);kv(d.quandoL||"Data/hora da entrega",d.quando);kv("Motorista",d.motorista);
- sec("Cliente e local");kv("Cliente",d.cliente+(d.doc?"  ·  "+d.doc:""));kv("Endereço",d.endereco);kv("Período",d.periodo);
- sec("Equipamento");kv("Tag",d.tag);kv("Descrição",d.desc+(d.tipoAtivo?" ("+d.tipoAtivo+")":""));kv("Condição do item",d.cond);kv("Ocorrências",d.ocor);kv("Observações",d.obs);
- sec("Relação de serviços e valores");
- pg.drawRectangle({x:40,y:y-5,width:515,height:18,color:rgb(.95,.93,.88)});T("Descrição",46,y,9,b,M);T("Quantidade",300,y,9,b,M);R("Valor unitário",450,y,9,b);R("Subtotal",549,y,9,b);y-=20;
- for(const[a,q,u,s]of d.itens){const L=wrap(a,240,10);L.forEach((l,i)=>T(l,46,y-i*13,10));T(q,300,y,10);R(u,450,y);R(s,549,y);y-=Math.max(1,L.length)*13+9;pg.drawLine({start:{x:40,y:y+11},end:{x:555,y:y+11},thickness:.4,color:LN})}
- y-=10;pg.drawRectangle({x:330,y:y-8,width:225,height:26,color:rgb(.05,.05,.04)});T("TOTAL",340,y,10,b,rgb(.9,.68,.24));T(brM(d.total),549-W(brM(d.total),12,b),y,12,b,rgb(.9,.68,.24));if(d.pgto)T("Pagamento: "+d.pgto,40,y,9.5,f,M);y-=34;
- sec("Recebedor");kv("Nome",d.rec||"");kv(d.recDocT||"CPF / RG",d.recDoc||"");if(!d.rec)T("Nome: ______________________   CPF/RG: ______________________",40,y+2,10),y-=8;
- sec("Assinaturas");y-=2;const bw=250,bh=100,by=Math.max(y-bh,56);
- for(const[i,k,l,n]of[[0,"am","Motorista / Entregador",d.motorista],[1,"ac","Cliente / Recebedor",d.rec]]){const x=40+i*265;pg.drawRectangle({x,y:by,width:bw,height:bh,borderColor:LN,borderWidth:.8});
-  if(d[k]){try{let im;try{im=await doc.embedPng(dataUrlBytes(d[k]))}catch(e){im=await doc.embedJpg(dataUrlBytes(d[k]))}const s=Math.min((bw-16)/im.width,(bh-16)/im.height);pg.drawImage(im,{x:x+8,y:by+8,width:im.width*s,height:im.height*s})}catch(e){}}
-  T(l+(n?" — "+n:""),x,by-13,8.5,b,M)}
+ const head=()=>{pg.drawRectangle({x:0,y:772,width:595,height:70,color:BK});T("MANUTEC",40,805,26,b,GD);T("LOCAÇÃO & SERVIÇOS",40,788,8,b,GD)};
+ const need=h=>{if(y-h<60){pg=doc.addPage([595,842]);head();y=745}};
+ head();T(d.titulo,40,745,14,b,G);
+ const sec=t=>{need(60);y-=8;pg.drawLine({start:{x:40,y:y+4},end:{x:555,y:y+4},thickness:.6,color:LN});y-=14;T(t.toUpperCase(),40,y,9,b,G);y-=16},kv=(k,v)=>{if(v===""||v==null)return;const L=wrap(v,390);need(L.length*14+6);T(k,40,y,9.5,b,M);L.forEach((l,i)=>{T(l,150,y,10.5);if(i<L.length-1)y-=14});y-=17};
+ const blocks=d.blocks||[{t:"Ordem de serviço",rows:[["Nº da ordem",d.ordem],["Locação",d.locacao],["Data agendada",d.agendado],[d.quandoL||"Data/hora da entrega",d.quando],["Motorista",d.motorista]]},{t:"Cliente e local",rows:[["Cliente",d.cliente+(d.doc?"  ·  "+d.doc:"")],["Endereço",d.endereco],["Período",d.periodo]]},{t:"Equipamento",rows:[["Tag",d.tag],["Descrição",d.desc+(d.tipoAtivo?" ("+d.tipoAtivo+")":"")],["Condição do item",d.cond],["Ocorrências",d.ocor],["Observações",d.obs]]}];
+ blocks.forEach(x=>{sec(x.t);x.rows.forEach(([k,v])=>kv(k,v))});
+ if(d.itens&&d.itens.length){sec("Relação de serviços e valores");need(40);
+  pg.drawRectangle({x:40,y:y-5,width:515,height:18,color:rgb(.95,.93,.88)});T("Descrição",46,y,9,b,M);T("Quantidade",300,y,9,b,M);R("Valor unitário",450,y,9,b);R("Subtotal",549,y,9,b);y-=20;
+  for(const[a,q,u,s]of d.itens){const L=wrap(a,240,10);need(L.length*13+30);L.forEach((l,i)=>T(l,46,y-i*13,10));T(q,300,y,10);R(u,450,y);R(s,549,y);y-=Math.max(1,L.length)*13+9;pg.drawLine({start:{x:40,y:y+11},end:{x:555,y:y+11},thickness:.4,color:LN})}
+  need(50);y-=10;pg.drawRectangle({x:330,y:y-8,width:225,height:26,color:BK});T("TOTAL",340,y,10,b,GD);T(brM(d.total),549-W(brM(d.total),12,b),y,12,b,GD);if(d.pgto)T("Pagamento: "+d.pgto,40,y,9.5,f,M);y-=34}
+ if(!d.blocks){sec("Recebedor");if(d.rec){kv("Nome",d.rec);kv(d.recDocT||"CPF / RG",d.recDoc||"")}else{T("Nome: ______________________   CPF/RG: ______________________",40,y+2,10);y-=8}}
+ const sigs=d.sigs||[{img:d.am,label:"Motorista / Entregador"+(d.motorista?" — "+d.motorista:"")},{img:d.ac,label:"Cliente / Recebedor"+(d.rec?" — "+d.rec:"")}];
+ sec("Assinaturas");need(130);y-=2;const bw=250,bh=100,by=Math.max(y-bh,56);
+ for(const[i,s]of sigs.entries()){const x=40+i*265;pg.drawRectangle({x,y:by,width:bw,height:bh,borderColor:LN,borderWidth:.8});
+  if(s.img){try{let im;try{im=await doc.embedPng(dataUrlBytes(s.img))}catch(e){im=await doc.embedJpg(dataUrlBytes(s.img))}const k=Math.min((bw-16)/im.width,(bh-16)/im.height);pg.drawImage(im,{x:x+8,y:by+8,width:im.width*k,height:im.height*k})}catch(e){}}
+  T(s.label,x,by-13,8.5,b,M)}
  T(d.rodape||"Documento gerado digitalmente — MANUTEC Locação & Serviços.",40,34,8,f,M)}
 return await doc.save()}
 
@@ -199,7 +201,7 @@ document.addEventListener("input",e=>{if(e.target.id==="q"){S.q=e.target.value;f
 document.addEventListener("click",async e=>{const t=e.target.closest("[data-a]");if(!t)return;e.preventDefault();const a=t.dataset.a;
 if(a==="login"){S.drv=t.dataset.n;W(ME,S.drv);S.view="list"}else if(a==="sair"){S.drv="";localStorage.removeItem(ME);S.view="login"}else if(a==="tab")S.tab=t.dataset.k;
 else if(a==="open"){S.sel=t.dataset.n;S.view="det";scrollTo(0,0);const o0=by0(S.sel);if(SB.ready&&o0.execucao==="Realizada"&&!(J(DONE,{})[S.sel]||{}).ac){try{const[r]=await SB.req("GET",`ordens_servico?id=eq.${o0.id}&select=ass_motorista,ass_cliente`);if(r){const D=J(DONE,{});D[S.sel]={...(D[S.sel]||{}),am:r.ass_motorista,ac:r.ass_cliente};W(DONE,D)}}catch(e){}}}else if(a==="back"){saveDraft();S.view="list"}
-else if(a==="theme"){const h=document.documentElement;h.dataset.theme=h.dataset.theme==="dark"?"light":"dark";W("manutec-theme",h.dataset.theme);return}
+else if(a==="theme"){const h=document.documentElement;h.classList.add("tt");setTimeout(()=>h.classList.remove("tt"),900);h.dataset.theme=h.dataset.theme==="dark"?"light":"dark";W("manutec-theme",h.dataset.theme);return}
 else if(a==="rota"){saveDraft();await push("ordens_servico",by0(S.sel).id,{status:"Em rota"});toast("Rota iniciada")}
 else if(a==="pdf"){await dl(view(by0(S.sel)));return}else if(a==="wa"){await wa(view(by0(S.sel)));return}
 else if(a==="sign"){const dr=draft();if(!dr.rec.trim())return toast("Informe o nome do recebedor.");if(dr.km!==undefined&&(dr.km===""||+dr.km<0))return toast("Informe os KM rodados.");if(dr.cond==="Com avarias"&&!dr.ocor.trim())return toast("Descreva a avaria em Ocorrências.");saveDraft();S.sig={step:0,dr,rec:dr.rec};R();return}
