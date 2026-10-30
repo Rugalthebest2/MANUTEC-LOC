@@ -174,26 +174,28 @@ const itensLoc=(desc,dia,qd,kv,km,total)=>{const I=[];if(+qd>0)I.push([`Diária 
 const dataUrlBytes=u=>Uint8Array.from(atob(u.split(",")[1]),c=>c.charCodeAt(0));
 /* d = {titulo, blocks:[{t,rows:[[k,v]]}] (ou campos do canhoto), itens:[[desc,qtd,unit,sub]], total, pgto, sigs:[{img,label}], rodape} */
 async function canhotoPDF(list){const{PDFDocument,StandardFonts,rgb}=PDFLib,doc=await PDFDocument.create(),f=await doc.embedFont(StandardFonts.Helvetica),b=await doc.embedFont(StandardFonts.HelveticaBold),G=rgb(.71,.48,.07),K=rgb(.1,.1,.09),M=rgb(.4,.4,.38),LN=rgb(.8,.78,.72),GD=rgb(.9,.68,.24),BK=rgb(.05,.05,.04);
-for(const d of list){let pg=doc.addPage([595,842]),y=718;
+const drawOne=async(d,S)=>{let pg=doc.addPage([595,842]),y=718;
  const T=(t,x,yy,s=10,fn=f,c=K)=>pg.drawText(String(t??""),{x,y:yy,size:s,font:fn,color:c}),W=(t,s=10,fn=f)=>fn.widthOfTextAtSize(String(t),s),R=(t,xr,yy,s=10,fn=f)=>T(t,xr-W(t,s,fn),yy,s,fn);
  const wrap=(t,w,s=10.5)=>{const o=[];String(t||"").split("\n").forEach(p=>{let l="";p.split(" ").forEach(x=>{if(W(l+" "+x,s)>w&&l){o.push(l);l=x}else l=l?l+" "+x:x});o.push(l)});return o};
  const head=()=>{pg.drawRectangle({x:0,y:772,width:595,height:70,color:BK});T("MANUTEC",40,805,26,b,GD);T("LOCAÇÃO & SERVIÇOS",40,788,8,b,GD)};
  const need=h=>{if(y-h<60){pg=doc.addPage([595,842]);head();y=745}};
  head();T(d.titulo,40,745,14,b,G);
- const sec=t=>{need(60);y-=8;pg.drawLine({start:{x:40,y:y+4},end:{x:555,y:y+4},thickness:.6,color:LN});y-=14;T(t.toUpperCase(),40,y,9,b,G);y-=16},kv=(k,v)=>{if(v===""||v==null)return;const L=wrap(v,390);need(L.length*14+6);T(k,40,y,9.5,b,M);L.forEach((l,i)=>{T(l,150,y,10.5);if(i<L.length-1)y-=14});y-=17};
+ const sec=t=>{need(60);y-=8*S;pg.drawLine({start:{x:40,y:y+4},end:{x:555,y:y+4},thickness:.6,color:LN});y-=14*S;T(t.toUpperCase(),40,y,9,b,G);y-=16*S},kv=(k,v)=>{if(v===""||v==null)return;const L=wrap(v,390);need(L.length*14+6);T(k,40,y,9.5,b,M);L.forEach((l,i)=>{T(l,150,y,10.5);if(i<L.length-1)y-=14});y-=17*S};
  const blocks=d.blocks||[{t:"Ordem de serviço",rows:[["Nº da ordem",d.ordem],["Locação",d.locacao],["Data agendada",d.agendado],[d.quandoL||"Data/hora da entrega",d.quando],["Motorista",d.motorista]]},{t:"Cliente e local",rows:[["Cliente",d.cliente+(d.doc?"  ·  "+d.doc:"")],["Endereço",d.endereco],["Período",d.periodo]]},{t:"Equipamento",rows:[["Tag",d.tag],["Descrição",d.desc+(d.tipoAtivo?" ("+d.tipoAtivo+")":"")],["Condição do item",d.cond],["Ocorrências",d.ocor],["Observações",d.obs]]}];
  blocks.forEach(x=>{sec(x.t);x.rows.forEach(([k,v])=>kv(k,v))});
  if(d.itens&&d.itens.length){sec("Relação de serviços e valores");need(40);
   pg.drawRectangle({x:40,y:y-5,width:515,height:18,color:rgb(.95,.93,.88)});T("Descrição",46,y,9,b,M);T("Quantidade",300,y,9,b,M);R("Valor unitário",450,y,9,b);R("Subtotal",549,y,9,b);y-=20;
-  for(const[a,q,u,s]of d.itens){const L=wrap(a,240,10);need(L.length*13+30);L.forEach((l,i)=>T(l,46,y-i*13,10));T(q,300,y,10);R(u,450,y);R(s,549,y);y-=Math.max(1,L.length)*13+9;pg.drawLine({start:{x:40,y:y+11},end:{x:555,y:y+11},thickness:.4,color:LN})}
-  need(50);y-=10;pg.drawRectangle({x:330,y:y-8,width:225,height:26,color:BK});T("TOTAL",340,y,10,b,GD);T(brM(d.total),549-W(brM(d.total),12,b),y,12,b,GD);if(d.pgto)T("Pagamento: "+d.pgto,40,y,9.5,f,M);y-=34}
+  for(const[a,q,u,s]of d.itens){const L=wrap(a,240,10);need(L.length*13+30);L.forEach((l,i)=>T(l,46,y-i*13,10));T(q,300,y,10);R(u,450,y);R(s,549,y);y-=Math.max(1,L.length)*13+9*S;pg.drawLine({start:{x:40,y:y+11},end:{x:555,y:y+11},thickness:.4,color:LN})}
+  need(50);y-=10;pg.drawRectangle({x:330,y:y-8,width:225,height:26,color:BK});T("TOTAL",340,y,10,b,GD);T(brM(d.total),549-W(brM(d.total),12,b),y,12,b,GD);if(d.pgto)T("Pagamento: "+d.pgto,40,y,9.5,f,M);y-=34*S}
  if(!d.blocks){sec("Responsável");if(d.rec){kv("Nome",d.rec);kv(d.recDocT||"CPF / RG",d.recDoc||"")}else{T("Nome: ______________________   CPF/RG: ______________________",40,y+2,10);y-=8}}
  const sigs=d.sigs||[{img:d.am,label:"Motorista / Entregador"+(d.motorista?" — "+d.motorista:"")},{img:d.ac,label:"Cliente / Responsável"+(d.rec?" — "+d.rec:"")}];
- sec("Assinaturas");need(130);y-=2;const bw=250,bh=100,by=Math.max(y-bh,56);
+ sec("Assinaturas");need(100);y-=2;const bw=250,bh=Math.round(100*Math.max(S,.7)),by=Math.max(y-bh,56);
  for(const[i,s]of sigs.entries()){const x=40+i*265;pg.drawRectangle({x,y:by,width:bw,height:bh,borderColor:LN,borderWidth:.8});
   if(s.img){try{let im;try{im=await doc.embedPng(dataUrlBytes(s.img))}catch(e){im=await doc.embedJpg(dataUrlBytes(s.img))}const k=Math.min((bw-16)/im.width,(bh-16)/im.height);pg.drawImage(im,{x:x+8,y:by+8,width:im.width*k,height:im.height*k})}catch(e){}}
   T(s.label,x,by-13,8.5,b,M)}
- T(d.rodape||"Documento gerado digitalmente — MANUTEC Locação & Serviços.",40,34,8,f,M)}
+ T(d.rodape||"Documento gerado digitalmente — MANUTEC Locação & Serviços.",40,34,8,f,M)};
+/* tenta caber tudo (assinaturas incluídas) em UMA página: reduz espaçamentos até caber */
+for(const d of list){const st=doc.getPageCount();for(const S of [1,.88,.77,.67,.58]){while(doc.getPageCount()>st)doc.removePage(doc.getPageCount()-1);await drawOne(d,S);if(doc.getPageCount()-st<=1)break}}
 return await doc.save()}
 
 async function mkPDF(o){const d=o.d,lc=by("locacoes",o.locacao_id),em=d.em?new Date(d.em):new Date(),when=`${pad(em.getDate())}/${pad(em.getMonth()+1)}/${em.getFullYear()} às ${pad(em.getHours())}:${pad(em.getMinutes())}`,ret=o.tipo==="Retirada";
